@@ -8,6 +8,7 @@ local use_legacy_query = vim.fn.has "nvim-0.9.0" ~= 1
 local parse_query_save = function(language, query)
     -- vim.treesitter.query.parse_query() is deprecated, use vim.treesitter.query.parse() instead
     local ok, parsed_query =
+---@diagnostic disable-next-line: deprecated
         pcall(use_legacy_query and vim.treesitter.query.parse_query or vim.treesitter.query.parse, language, query)
     if not ok then
         return nil
@@ -237,16 +238,34 @@ M.refresh = function()
                 local get_text_function = use_legacy_query and q.get_node_text(node, bufnr)
                     or vim.treesitter.get_node_text(node, bufnr)
                 local level = #vim.trim(get_text_function)
-                local hl_group = c.headline_highlights[math.min(level, #c.headline_highlights)]
-                nvim_buf_set_extmark(bufnr, M.namespace, start_row, 0, {
-                    end_col = 0,
-                    end_row = start_row + 1,
-                    hl_group = hl_group,
-                    hl_eol = true,
-                })
+                -- local hl_group = c.headline_highlights[math.min(level, #c.headline_highlights)]
+                -- nvim_buf_set_extmark(bufnr, M.namespace, start_row, 0, {
+                --     end_col = 0,
+                --     end_row = start_row + 1,
+                --     hl_group = hl_group,
+                --     hl_eol = true,
+                -- })
+                level = math.min(level, #c.headline_highlights)
+                local hl_group = c.headline_highlights[level]
+                if c.whole_line then
+                    nvim_buf_set_extmark(bufnr, M.namespace, start_row, 0, {
+                        end_col = 0,
+                        end_row = start_row + 1,
+                        hl_group = hl_group,
+                        hl_eol = true,
+                    })
+                else
+                    nvim_buf_set_extmark(bufnr, M.namespace, start_row, 0, {
+                        end_col = level,
+                        end_row = start_row + 0,
+                        hl_group = hl_group,
+                        hl_eol = true,
+                    })
+                end
 
                 if c.fat_headlines then
-                    local reverse_hl_group = M.make_reverse_highlight(hl_group)
+                    local reverse_hl_group = c.headline_highlights[level]
+                    -- local reverse_hl_group = M.make_reverse_highlight(hl_group)
 
                     local padding_above = { { c.fat_headline_upper_string:rep(width), reverse_hl_group } }
                     if start_row > 0 then
